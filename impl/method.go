@@ -22,8 +22,7 @@ type Method struct {
 
 var methodTemplate = `func (s *server) {{ .Name }}(c context.Context, r {{ .InputType }}) (*{{ .OutputType }}, error) {
 	{{ PrintBody }}
-}
-`
+}`
 
 var constMethodBodyTemplate = `data, err := s.contract.{{ .Name }}(
 		&bind.CallOpts{
@@ -31,8 +30,9 @@ var constMethodBodyTemplate = `data, err := s.contract.{{ .Name }}(
 			Context: c,
 		},{{ PrintArgs }}
 	)
-	return &{{ .OutputType }}{ {{ PrintOutputArgs }}
-	}, err`
+	result := &{{ .OutputType }}{ {{ PrintOutputArgs }}
+	}
+	return result, err`
 
 var methodBodyTemplate = `tx, err := s.contract.{{ .Name }}(
 		r.GetOpts().TransactOpts(),{{ PrintArgs }}
@@ -130,9 +130,8 @@ func (m Method) printBody() string {
 					args := ""
 					for i := 0; i < len(m.Response.Fields); i++ {
 						// TODO: may add nil protection
-						args += "\n\t\t" + toResponseParam(m.Response.Fields[i], m.ContractMethod.Results[i]) + ","
+						args += "\n\t\t" + toResponseParam(m.ContractMethod.Results[i], m.Response.Fields[i]) + ","
 					}
-
 					return args
 				},
 			})).Parse(constMethodBodyTemplate)

@@ -45,4 +45,20 @@ func (m *TransactOpts) TransactOpts() *bind.TransactOpts {
 	auth.Value = big.NewInt(m.Value)
 	return auth
 }
+
+// BigIntArrayToBytes converts []*big.Int to [][]byte
+func BigIntArrayToBytes(ints []*big.Int) (b [][]byte) {
+	for _, i := range ints {
+		b = append(b, i.Bytes())
+	}
+	return
+}
+
+// BytesToBigIntArray converts [][]byte to []*big.Int
+func BytesToBigIntArray(b [][]byte) (ints []*big.Int) {
+	for _, i := range b {
+		ints = append(ints, new(big.Int).SetBytes(i))
+	}
+	return
+}
 `

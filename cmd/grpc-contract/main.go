@@ -9,7 +9,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/getamis/grpc-contract/impl"
+	"github.com/getamis/grpc-contract/internal/impl"
 	"github.com/getamis/sol2proto/util"
 	parser "github.com/zpatrick/go-parser"
 )

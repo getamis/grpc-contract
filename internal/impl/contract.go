@@ -39,9 +39,14 @@ func (m *TransactOpts) TransactOpts() *bind.TransactOpts {
 		os.Exit(-1)
 	}
 	auth := bind.NewKeyedTransactor(privateKey)
-	auth.GasLimit = big.NewInt(4712388)
-	auth.GasPrice = big.NewInt(20000000000)
-	auth.Nonce = nil //big.NewInt(m.Nonce)
+	auth.GasLimit = big.NewInt(m.GasLimit)
+	auth.GasPrice = big.NewInt(m.GasPrice)
+	if m.Nonce < 0 {
+		// get system account nonce
+		auth.Nonce = nil
+	} else {
+		auth.Nonce = big.NewInt(m.Nonce)
+	}
 	auth.Value = big.NewInt(m.Value)
 	return auth
 }

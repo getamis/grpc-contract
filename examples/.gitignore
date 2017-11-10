@@ -1,3 +1,5 @@
 contracts/*
 build/*
 cmd/server/*
+NameService.abi
+NameService.bin

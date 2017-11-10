@@ -1,4 +1,9 @@
+pkg:=$(shell echo '$(name)' | perl -pe 's/([A-Z])/_\L\1/g' | sed 's/^_//')
+
 setup:
+	# install proto, protoc-gen-go
+	go install github.com/golang/protobuf/proto
+	go install github.com/golang/protobuf/protoc-gen-go
 	# install sol2proto
 	go install github.com/getamis/sol2proto
 	# install grpc-contract
@@ -7,6 +12,7 @@ setup:
 	go install github.com/ethereum/go-ethereum/cmd/abigen
 
 run:
+	solc --bin --abi --gas --optimize --overwrite -o . $(name).sol
 	mkdir -p contracts/$(pkg)
 	sol2proto --pkg $(pkg) --abi $(name).abi > contracts/$(pkg)/$(pkg).proto
 	protoc --go_out=plugins=grpc:. contracts/$(pkg)/$(pkg).proto

@@ -11,7 +11,7 @@ run:
 	sol2proto --pkg $(pkg) --abi $(name).abi > contracts/$(pkg)/$(pkg).proto
 	protoc --go_out=plugins=grpc:. contracts/$(pkg)/$(pkg).proto
 	abigen --type $(name) --abi $(name).abi --pkg $(pkg) --out ./contracts/$(pkg)/$(pkg).go --bin $(name).bin
-	grpc-contract -type $(pkg) -path ./contracts/$(pkg) > ./contracts/$(pkg)/$(pkg)_server.go
+	grpc-contract -type $(pkg) -path ./contracts/$(pkg) -package ${path}
 
 server:
 	go build -v -o ./build/bin/server ./cmd/server

@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	fmt "fmt"
-	"html"
-	"html/template"
 	"os"
 	"path"
 
@@ -15,13 +12,15 @@ import (
 )
 
 var (
-	filepath string
-	goType   string
+	filepath    string
+	goType      string
+	packagePath string
 )
 
 func init() {
 	flag.StringVar(&goType, "type", "", "the go file from proto")
 	flag.StringVar(&filepath, "path", ".", "path")
+	flag.StringVar(&packagePath, "package", ".", "package path")
 }
 
 func main() {
@@ -91,19 +90,11 @@ func main() {
 		}
 		break
 	}
+	contract.Write(filepath, goType+"_server.go")
 
-	// Parse and render the template
-	implTemplate, err := template.New("grpc_impl").Parse(impl.ContractTemplate)
-	if err != nil {
-		fmt.Printf("Failed to parse template: %v\n", err)
-		os.Exit(-1)
+	server := &impl.Server{
+		ContractName:    goType,
+		ContractPackage: path.Join(packagePath, filepath),
 	}
-	result := new(bytes.Buffer)
-	err = implTemplate.Execute(result, contract)
-	if err != nil {
-		fmt.Printf("Failed to render template: %v\n", err)
-		os.Exit(-1)
-	}
-
-	fmt.Print(html.UnescapeString(html.UnescapeString(result.String())))
+	server.Write("cmd/server", "main.go")
 }

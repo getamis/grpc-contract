@@ -1,5 +1,15 @@
 package impl
 
+import (
+	"bytes"
+	"fmt"
+	"html"
+	"html/template"
+	"os"
+
+	"github.com/getamis/grpc-contract/internal/util"
+)
+
 type Contract struct {
 	Package string
 	Name    string
@@ -67,3 +77,19 @@ func BytesToBigIntArray(b [][]byte) (ints []*big.Int) {
 	return
 }
 `
+
+func (c *Contract) Write(filepath, filename string) {
+	implTemplate, err := template.New("contract").Parse(ContractTemplate)
+	if err != nil {
+		fmt.Printf("Failed to parse template: %v\n", err)
+		os.Exit(-1)
+	}
+	result := new(bytes.Buffer)
+	err = implTemplate.Execute(result, c)
+	if err != nil {
+		fmt.Printf("Failed to render template: %v\n", err)
+		os.Exit(-1)
+	}
+	content := html.UnescapeString(html.UnescapeString(result.String()))
+	util.WriteFile(content, filepath, filename)
+}

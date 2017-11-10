@@ -1,6 +1,12 @@
 package util
 
-import "strings"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
+)
 
 func ToCamelCase(inputUnderScoreStr string) (camelCase string) {
 	isToUpper := false
@@ -22,4 +28,18 @@ func ToCamelCase(inputUnderScoreStr string) (camelCase string) {
 		}
 	}
 	return
+}
+
+func WriteFile(content, filePath, fileName string) {
+	err := os.MkdirAll(filePath, os.ModePerm)
+	if err != nil {
+		fmt.Printf("Failed to create folder %v failed: %v\n", filePath, err)
+		os.Exit(-1)
+	}
+
+	err = ioutil.WriteFile(path.Join(filePath, fileName), []byte(content), os.ModePerm)
+	if err != nil {
+		fmt.Printf("Failed to write %v file: %v\n", fileName, err)
+		os.Exit(-1)
+	}
 }

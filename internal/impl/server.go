@@ -11,8 +11,8 @@ import (
 )
 
 type Server struct {
-	ContractPackage string
-	ContractName    string
+	ContractName   string
+	ProjectPackage string
 }
 
 var ServerTemplate string = `package main
@@ -28,7 +28,7 @@ import "github.com/ethereum/go-ethereum/accounts/abi/bind"
 import "github.com/ethereum/go-ethereum/common"
 import "github.com/ethereum/go-ethereum/crypto"
 import "github.com/ethereum/go-ethereum/ethclient"
-import "{{ .ContractPackage }}"
+import {{ .ContractName }} "{{ .ProjectPackage }}"
 import flag "github.com/spf13/pflag"
 import "github.com/spf13/viper"
 import "google.golang.org/grpc"
@@ -94,7 +94,7 @@ func main() {
 		auth.Nonce = big.NewInt(int64(nonce))
 		auth.GasPrice = big.NewInt(20000000000)
 
-		addr, _, _, err = {{ .ContractName }}.DeployNameService(auth, conn)
+		addr, _, _, err = {{ .ContractName }}.Deploy{{ .ContractName }}(auth, conn)
 		if err != nil {
 			fmt.Printf("Failed to deploy contract: %v\n", err)
 			os.Exit(-1)
@@ -111,7 +111,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	{{ .ContractName }}.RegisterNameServiceServer(s, {{ .ContractName }}.NewServer(addr, conn))
+	{{ .ContractName }}.Register{{ .ContractName }}Server(s, {{ .ContractName }}.NewServer(addr, conn))
 
 	lis, err := net.Listen("tcp", port)
 	if err != nil {

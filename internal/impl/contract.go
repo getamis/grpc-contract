@@ -76,6 +76,12 @@ func BytesToBigIntArray(b [][]byte) (ints []*big.Int) {
 	}
 	return
 }
+
+// BytesToBytes32 converts []byte to [32]byte
+func BytesToBytes32(b []byte) (bs [32]byte) {
+	copy(bs[:], b[:32])
+	return
+}
 `
 
 func (c *Contract) Write(filepath, filename string) {

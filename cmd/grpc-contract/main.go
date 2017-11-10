@@ -93,8 +93,8 @@ func main() {
 	contract.Write(filepath, goType+"_server.go")
 
 	server := &impl.Server{
-		ContractName:    goType,
-		ContractPackage: path.Join(packagePath, filepath),
+		ContractName:   util.ToCamelCase(goType),
+		ProjectPackage: path.Join(packagePath, filepath),
 	}
 	server.Write("cmd/server", "main.go")
 }

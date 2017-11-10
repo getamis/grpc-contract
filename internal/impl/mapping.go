@@ -12,6 +12,7 @@ import (
 var typeMaps = map[string]map[string]string{
 	"[]byte": {
 		"*big.Int": `new(big.Int).SetBytes({{ .Input }})`,
+		"[32]byte": `BytesToBytes32({{ .Input }})`,
 	},
 	"string": {
 		"common.Address": `common.HexToAddress({{ .Input }})`,
@@ -27,6 +28,9 @@ var typeMaps = map[string]map[string]string{
 	},
 	"[32]byte": {
 		"[]byte": `{{ .Input }}[:]`,
+	},
+	"common.Address": {
+		"string": `{{ .Input }}.Hex()`,
 	},
 }
 

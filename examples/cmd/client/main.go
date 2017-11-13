@@ -47,7 +47,6 @@ func main() {
 			Nonce:      -1,
 			Value:      0,
 			GasLimit:   4712388,
-			GasPrice:   20000000000,
 		},
 		Name: "Mark",
 	})

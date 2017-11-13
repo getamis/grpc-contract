@@ -105,7 +105,6 @@ func main() {
 			os.Exit(-1)
 		}
 		auth.Nonce = big.NewInt(int64(nonce))
-		auth.GasPrice = big.NewInt(20000000000)
 
 		addr, _, _, err = {{ .ContractName }}.Deploy{{ .ContractName }}(auth, conn)
 		if err != nil {

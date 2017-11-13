@@ -56,7 +56,7 @@ func main() {
 	}
 	fmt.Printf("Set name in tx: %v\n", tx.Hash)
 
-	r, err := c.GetName(context.Background(), &name_service.EmptyReq{})
+	r, err := c.GetName(context.Background(), &name_service.Empty{})
 	if err != nil {
 		fmt.Printf("Failed to get name: %v\n", err)
 		os.Exit(1)

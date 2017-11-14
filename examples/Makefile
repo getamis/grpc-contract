@@ -2,14 +2,14 @@ pkg:=$(shell echo '$(name)' | perl -pe 's/([A-Z])/_\L\1/g' | sed 's/^_//')
 
 setup:
 	# install proto, protoc-gen-go
-	go install github.com/golang/protobuf/proto
-	go install github.com/golang/protobuf/protoc-gen-go
+	go get github.com/golang/protobuf/proto
+	go get github.com/golang/protobuf/protoc-gen-go
 	# install sol2proto
-	go install github.com/getamis/sol2proto
+	go get github.com/getamis/sol2proto
 	# install grpc-contract
-	go install github.com/getamis/grpc-contract/cmd/grpc-contract
+	go get github.com/getamis/grpc-contract/cmd/grpc-contract
 	# install abigen
-	go install github.com/ethereum/go-ethereum/cmd/abigen
+	go get github.com/ethereum/go-ethereum/cmd/abigen
 
 run:
 	solc --bin --abi --gas --optimize --overwrite -o . $(name).sol

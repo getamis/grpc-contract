@@ -12,7 +12,7 @@ setup:
 	go get github.com/ethereum/go-ethereum/cmd/abigen
 
 run:
-	solc --bin --abi --gas --optimize --overwrite -o . $(name).sol
+	solc --bin --abi --optimize --overwrite -o . $(name).sol
 	mkdir -p contracts/$(pkg)
 	sol2proto --pkg $(pkg) --abi $(name).abi > contracts/$(pkg)/$(pkg).proto
 	protoc --go_out=plugins=grpc:. contracts/$(pkg)/$(pkg).proto

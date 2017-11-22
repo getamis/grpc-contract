@@ -1,6 +1,7 @@
 An example to show how to crate DAPP using [sol2proto](https://github.com/getamis/sol2proto) and grpc-contract.
 
 ## Build
+This example requires a Go (version 1.7 or later) compiler. You can install them using your favorite package manager. Once the dependencies are installed,
 
 1. Install [proto](https://github.com/google/protobuf/releases/) and [solc](http://solidity.readthedocs.io/en/develop/installing-solidity.html)
 

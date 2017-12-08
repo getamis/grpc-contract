@@ -20,12 +20,12 @@ import (
 	"text/template"
 
 	"github.com/getamis/grpc-contract/internal/util"
+	"golang.org/x/tools/imports"
 )
 
 type Contract struct {
 	Package string
 	Name    string
-	Imports []string
 	Methods []*Method
 }
 
@@ -37,8 +37,6 @@ func (c *Contract) IsServerInterface(name string) bool {
 }
 
 var ContractTemplate string = `package {{ .Package }};
-{{ range .Imports }}
-import "{{ . }}"{{ end }}
 
 type server struct {
 	contract *{{ .Name }}
@@ -108,5 +106,10 @@ func (c *Contract) Write(filepath, filename string) {
 		fmt.Printf("Failed to render template: %v\n", err)
 		os.Exit(-1)
 	}
-	util.WriteFile(result.String(), filepath, filename)
+	code, err := imports.Process(".", result.Bytes(), nil)
+	if err != nil {
+		fmt.Printf("Failed to process code: %v\n", err)
+		os.Exit(-1)
+	}
+	util.WriteFile(string(code), filepath, filename)
 }

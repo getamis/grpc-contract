@@ -72,3 +72,17 @@ The `context` is in the standard library Go 1.7 already. Make sure the latest ve
 go get -u google.golang.org/grpc
 go get -u github.com/golang/protobuf/protoc-gen-go
 ```
+
+3. Wrong imports in generated file
+- You may find you have wrong imports in the generated file, such as:
+
+```
+github.com/markya0616/go-ethereum/core/types
+```
+
+The correct one should be:
+```
+github.com/ethereum/go-ethereum/core/types
+```
+
+The main reason is that [goImports](https://godoc.org/golang.org/x/tools/cmd/goimports) finds the wrong imports. The solution is to create a configuration file at `$GOPATH/src/.goimportsignore` and put in the ignore wrong path, i.e., `github.com/markya0616/go-ethereum/`. After that, generate files again, it should work.

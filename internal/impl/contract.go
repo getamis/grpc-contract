@@ -16,9 +16,8 @@ package impl
 import (
 	"bytes"
 	"fmt"
-	"html"
-	"html/template"
 	"os"
+	"text/template"
 
 	"github.com/getamis/grpc-contract/internal/util"
 )
@@ -109,6 +108,5 @@ func (c *Contract) Write(filepath, filename string) {
 		fmt.Printf("Failed to render template: %v\n", err)
 		os.Exit(-1)
 	}
-	content := html.UnescapeString(html.UnescapeString(result.String()))
-	util.WriteFile(content, filepath, filename)
+	util.WriteFile(result.String(), filepath, filename)
 }

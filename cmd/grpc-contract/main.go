@@ -52,15 +52,6 @@ func main() {
 	}
 
 	contract := impl.Contract{
-		Imports: []string{
-			"context",
-			"math/big",
-			"os",
-
-			"github.com/ethereum/go-ethereum/accounts/abi/bind",
-			"github.com/ethereum/go-ethereum/common",
-			"github.com/ethereum/go-ethereum/crypto",
-		},
 		Package: goFile.Package,
 		Name:    util.ToCamelCase(goType),
 	}

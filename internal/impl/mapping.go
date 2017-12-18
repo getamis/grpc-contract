@@ -16,8 +16,8 @@ package impl
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"os"
+	"text/template"
 
 	parser "github.com/zpatrick/go-parser"
 )

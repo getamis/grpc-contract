@@ -19,13 +19,3 @@ run:
 	protoc --go_out=plugins=grpc:./contracts -I contracts contracts/*.proto
 	abigen --type $(name) --abi $(name).abi --pkg contracts --out ./contracts/$(filename).go --bin $(name).bin
 	grpc-contract --types $(filename) --path ./contracts
-
-server:
-	go build -v -o ./build/bin/server ./cmd/server
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/server\" to launch server."
-
-client:
-	go build -v -o ./build/bin/client ./cmd/client
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/client\" to launch client."

@@ -33,7 +33,7 @@ type Method struct {
 	Response       *parser.GoStruct
 }
 
-var methodTemplate = `func (s *server) {{ .Name }}(c context.Context, r {{ .InputType }}) (*{{ .OutputType }}, error) {
+var methodTemplate = `func (s *{{ .StructName }}) {{ .Name }}(c context.Context, r {{ .InputType }}) (*{{ .OutputType }}, error) {
 	{{ PrintBody }}
 }`
 
@@ -48,18 +48,23 @@ var constMethodBodyTemplate = `data, err := s.contract.{{ .Name }}(
 	return result, err`
 
 var methodBodyTemplate = `tx, err := s.contract.{{ .Name }}(
-		r.GetOpts().TransactOpts(),{{ PrintArgs }}
+		s.transactOptsFn(r.GetOpts()),{{ PrintArgs }}
 	)
 	if tx == nil {
 		return nil, err
 	}
+	b, err := rlp.EncodeToBytes(tx)
 	return &TransactionResp{
-		Hash: tx.Hash().Hex(),
+		Tx: &any.Any{
+			TypeUrl: "github.com/ethereum/go-ethereum/core/types/Transaction",
+			Value: b,
+		},
 	}, err`
 
-func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile) *Method {
+func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile, structName string) *Method {
 	im := &Method{
-		Name: m.Name,
+		Name:       m.Name,
+		StructName: structName,
 	}
 
 	im.InputType = m.Params[1].Type

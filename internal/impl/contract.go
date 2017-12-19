@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/getamis/grpc-contract/internal/util"
@@ -24,9 +25,19 @@ import (
 )
 
 type Contract struct {
-	Package string
-	Name    string
-	Methods []*Method
+	Package    string
+	Name       string
+	Methods    []*Method
+	StructName string
+}
+
+func NewContract(pack string, name string) Contract {
+	c := Contract{
+		Package: pack,
+		Name:    name,
+	}
+	c.StructName = strings.ToLower(string(c.Name[0])) + c.Name[1:len(c.Name)]
+	return c
 }
 
 func (c *Contract) IsServerInterface(name string) bool {
@@ -38,60 +49,26 @@ func (c *Contract) IsServerInterface(name string) bool {
 
 var ContractTemplate string = `package {{ .Package }};
 
-type server struct {
+type {{ .StructName }} struct {
 	contract *{{ .Name }}
+	transactOptsFn TransactOptsFn
 }
 
-func NewServer(address common.Address, backend bind.ContractBackend) {{ .Name }}Server {
+func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend, transactOptsFn TransactOptsFn) {{ .Name }}Server {
 	contract, _ := New{{ .Name }}(address, backend)
-	return &server{
-		contract: contract,
+	service := &{{ .StructName }}{
+		contract:     contract,
+		transactOptsFn: transactOptsFn,
 	}
+	if transactOptsFn == nil {
+		service.transactOptsFn = defaultTransactOptsFn
+	}
+	return service
 }
 
 {{ range .Methods }}
 {{ . }}
 {{ end }}
-// TransactOpts converts to bind.TransactOpts
-func (m *TransactOpts) TransactOpts() *bind.TransactOpts {
-	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(m.PrivateKey))
-	if err != nil {
-		os.Exit(-1)
-	}
-	auth := bind.NewKeyedTransactor(privateKey)
-	auth.GasLimit = big.NewInt(m.GasLimit)
-	auth.GasPrice = big.NewInt(m.GasPrice)
-	if m.Nonce < 0 {
-		// get system account nonce
-		auth.Nonce = nil
-	} else {
-		auth.Nonce = big.NewInt(m.Nonce)
-	}
-	auth.Value = big.NewInt(m.Value)
-	return auth
-}
-
-// BigIntArrayToBytes converts []*big.Int to [][]byte
-func BigIntArrayToBytes(ints []*big.Int) (b [][]byte) {
-	for _, i := range ints {
-		b = append(b, i.Bytes())
-	}
-	return
-}
-
-// BytesToBigIntArray converts [][]byte to []*big.Int
-func BytesToBigIntArray(b [][]byte) (ints []*big.Int) {
-	for _, i := range b {
-		ints = append(ints, new(big.Int).SetBytes(i))
-	}
-	return
-}
-
-// BytesToBytes32 converts []byte to [32]byte
-func BytesToBytes32(b []byte) (bs [32]byte) {
-	copy(bs[:], b[:32])
-	return
-}
 `
 
 func (c *Contract) Write(filepath, filename string) {

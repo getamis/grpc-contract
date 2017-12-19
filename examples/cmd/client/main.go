@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
-	"github.com/getamis/grpc-contract/examples/contracts/name_service"
+	"github.com/getamis/grpc-contract/examples/contracts"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -38,11 +39,11 @@ func main() {
 		os.Exit(-1)
 	}
 	defer conn.Close()
-	c := name_service.NewNameServiceClient(conn)
+	c := contracts.NewNameServiceClient(conn)
 
 	// Contact the server and print out its response.
-	tx, err := c.SetName(context.Background(), &name_service.SetNameReq{
-		Opts: &name_service.TransactOpts{
+	res, err := c.SetName(context.Background(), &contracts.SetNameReq{
+		Opts: &contracts.TransactOpts{
 			PrivateKey: "9ad3ea7650babad5d1976b75b3141278942cebbe423e84d7a6800ae67a0a74b5",
 			Nonce:      -1,
 			Value:      0,
@@ -54,9 +55,13 @@ func main() {
 		fmt.Printf("Failed to set name: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Set name in tx: %v\n", tx.Hash)
+	tx, _ := contracts.AnyToTransaction(res.Tx)
+	fmt.Printf("Set name in tx: %v\n", tx.Hash().Hex())
 
-	r, err := c.GetName(context.Background(), &name_service.Empty{})
+	// wait for mining
+	<-time.After(2 * time.Second)
+
+	r, err := c.GetName(context.Background(), &contracts.Empty{})
 	if err != nil {
 		fmt.Printf("Failed to get name: %v\n", err)
 		os.Exit(1)

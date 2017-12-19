@@ -1,4 +1,4 @@
-pkg:=$(shell echo '$(name)' | perl -pe 's/([A-Z])/_\L\1/g' | sed 's/^_//')
+filename:=$(shell echo '$(name)' | perl -pe 's/([A-Z])/_\L\1/g' | sed 's/^_//')
 
 setup:
 	# install proto, protoc-gen-go
@@ -13,11 +13,12 @@ setup:
 
 run:
 	solc --bin --abi --optimize --overwrite -o . $(name).sol
-	mkdir -p contracts/$(pkg)
-	sol2proto --pkg $(pkg) --abi $(name).abi > contracts/$(pkg)/$(pkg).proto
-	protoc --go_out=plugins=grpc:. contracts/$(pkg)/$(pkg).proto
-	abigen --type $(name) --abi $(name).abi --pkg $(pkg) --out ./contracts/$(pkg)/$(pkg).go --bin $(name).bin
-	grpc-contract -type $(pkg) -path ./contracts/$(pkg) -package ${path}
+	mkdir -p contracts
+	sol2proto --pkg contracts --abi $(name).abi
+	mv *.proto contracts
+	protoc --go_out=plugins=grpc:./contracts -I contracts contracts/*.proto
+	abigen --type $(name) --abi $(name).abi --pkg contracts --out ./contracts/$(filename).go --bin $(name).bin
+	grpc-contract --types $(filename) --path ./contracts
 
 server:
 	go build -v -o ./build/bin/server ./cmd/server

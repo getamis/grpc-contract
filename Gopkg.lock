@@ -52,8 +52,8 @@
 [[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
-  revision = "be5ece7dd465ab0765a9682137865547526d1dfb"
-  version = "v1.7.3"
+  revision = "d419a98cdbed11a922bf76f257b7c4be79b50e73"
+  version = "v1.7.4"
 
 [[projects]]
   branch = "master"
@@ -125,7 +125,7 @@
   branch = "master"
   name = "github.com/zpatrick/go-parser"
   packages = ["."]
-  revision = "7396665de2a425d4f343017a7099b1470b23eb02"
+  revision = "b6df51c1f824ed336bcf92019bf151f00c8dad90"
 
 [[projects]]
   branch = "master"
@@ -196,6 +196,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "59bf5e07243752d4f13332f2b7949ef1a57c7bdb026372b77113b60e397c0314"
+  inputs-digest = "8bac57a3f0d79c9cf64ea69cf76632949ef7614d767869bef6e99f9203cc0c54"
   solver-name = "gps-cdcl"
   solver-version = 1

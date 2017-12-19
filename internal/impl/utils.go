@@ -29,8 +29,10 @@ type Utils struct {
 
 var UtilsTemplate string = `package {{ .Package }};
 
-// TransactOpts converts to bind.TransactOpts
-func (m *TransactOpts) TransactOpts() *bind.TransactOpts {
+type TransactOptsFn func(m *TransactOpts) *bind.TransactOpts
+
+// defaultTransactOpts
+func defaultTransactOptsFn(m *TransactOpts) *bind.TransactOpts {
 	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(m.PrivateKey))
 	if err != nil {
 		os.Exit(-1)
@@ -46,6 +48,16 @@ func (m *TransactOpts) TransactOpts() *bind.TransactOpts {
 	}
 	auth.Value = big.NewInt(m.Value)
 	return auth
+}
+
+// AnyToTransaction converts data to types.Transaction
+func AnyToTransaction(data *any.Any) (*types.Transaction, error){
+	tx := &types.Transaction{}
+	err := rlp.DecodeBytes(data.Value, tx)
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 // BigIntArrayToBytes converts []*big.Int to [][]byte

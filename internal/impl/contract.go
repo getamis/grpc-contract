@@ -51,13 +51,19 @@ var ContractTemplate string = `package {{ .Package }};
 
 type {{ .StructName }} struct {
 	contract *{{ .Name }}
+	transactOptsFn TransactOptsFn
 }
 
-func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend) {{ .Name }}Server {
+func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend, transactOptsFn TransactOptsFn) {{ .Name }}Server {
 	contract, _ := New{{ .Name }}(address, backend)
-	return &{{ .StructName }}{
-		contract: contract,
+	service := &{{ .StructName }}{
+		contract:     contract,
+		transactOptsFn: transactOptsFn,
 	}
+	if transactOptsFn == nil {
+		service.transactOptsFn = defaultTransactOptsFn
+	}
+	return service
 }
 
 {{ range .Methods }}

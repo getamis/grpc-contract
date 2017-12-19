@@ -48,13 +48,17 @@ var constMethodBodyTemplate = `data, err := s.contract.{{ .Name }}(
 	return result, err`
 
 var methodBodyTemplate = `tx, err := s.contract.{{ .Name }}(
-		r.GetOpts().TransactOpts(),{{ PrintArgs }}
+		s.transactOptsFn(r.GetOpts()),{{ PrintArgs }}
 	)
 	if tx == nil {
 		return nil, err
 	}
+	b, err := rlp.EncodeToBytes(tx)
 	return &TransactionResp{
-		Hash: tx.Hash().Hex(),
+		Tx: &any.Any{
+			TypeUrl: "github.com/ethereum/go-ethereum/core/types/Transaction",
+			Value: b,
+		},
 	}, err`
 
 func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile, structName string) *Method {

@@ -14,91 +14,111 @@
 package main
 
 import (
-	"flag"
 	fmt "fmt"
+	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/getamis/grpc-contract/internal/impl"
 	"github.com/getamis/sol2proto/util"
+	flag "github.com/spf13/pflag"
 	parser "github.com/zpatrick/go-parser"
 )
 
 var (
-	filepath    string
-	goType      string
-	packagePath string
+	filepath string
+	goTypes  []string
 )
 
 func init() {
-	flag.StringVar(&goType, "type", "", "the go file from proto")
+	flag.StringArrayVar(&goTypes, "types", []string{}, "the go-binding files")
 	flag.StringVar(&filepath, "path", ".", "path")
-	flag.StringVar(&packagePath, "package", ".", "package path")
 }
 
 func main() {
 	flag.Parse()
 
-	goFile, err := parser.ParseFile(path.Join(filepath, goType+".pb.go"))
+	// Find all proto generated files
+	filesInfos, err := ioutil.ReadDir(filepath)
+	if err != nil {
+		fmt.Printf("Failed to list files: %v\n", err)
+		os.Exit(-1)
+	}
+	var files []string
+	for _, f := range filesInfos {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), ".pb.go") {
+			files = append(files, path.Join(filepath, f.Name()))
+		}
+	}
+	if len(files) == 0 {
+		fmt.Printf("Cannot find the generated proto files")
+		os.Exit(-1)
+	}
+	goFiles, err := parser.ParseFiles(files)
 	if err != nil {
 		fmt.Printf("Failed to parse file: %v\n", err)
 		os.Exit(-1)
 	}
-
-	goBindingFile, err := parser.ParseFile(path.Join(filepath, goType+".go"))
-	if err != nil {
-		fmt.Printf("Failed to parse file: %v\n", err)
+	if len(goFiles) == 0 {
+		fmt.Printf("Cannot get the go files")
 		os.Exit(-1)
 	}
 
-	contract := impl.Contract{
-		Package: goFile.Package,
-		Name:    util.ToCamelCase(goType),
+	// Save the common util functions
+	grpcUtils := impl.Utils{
+		Package: goFiles[0].Package,
 	}
+	grpcUtils.Write(filepath, "grpc_utils.go")
 
-	// Try to find the grpc server intreface
-	for _, i := range goFile.Interfaces {
-		if !contract.IsServerInterface(i.Name) {
-			continue
+	for _, goType := range goTypes {
+		goBindingFile, err := parser.ParseSingleFile(path.Join(filepath, goType+".go"))
+		if err != nil {
+			fmt.Printf("Failed to parse file: %v\n", err)
+			os.Exit(-1)
 		}
-		for _, m := range i.Methods {
-			// Find request struct
-			requestStructName := m.Params[1].Type[1:]
-			var request *parser.GoStruct
-			for _, s := range goFile.Structs {
-				if requestStructName == s.Name {
-					request = s
-					break
-				}
-			}
-			if request == nil {
-				fmt.Printf("Failed to corresponding request struct in method %v\n", m.Name)
-				os.Exit(-1)
-			}
 
-			// Find response struct
-			responseStructName := m.Results[0].Type[1:]
-			var response *parser.GoStruct
-			for _, s := range goFile.Structs {
-				if responseStructName == s.Name {
-					response = s
-					break
-				}
-			}
-			if response == nil {
-				fmt.Printf("Failed to corresponding response struct in method %v\n", m.Name)
-				os.Exit(-1)
-			}
+		contract := impl.NewContract(goFiles[0].Package, util.ToCamelCase(goType))
 
-			contract.Methods = append(contract.Methods, impl.NewMethod(m, request, response, goBindingFile))
+		// Try to find the grpc server intreface
+		for _, goFile := range goFiles {
+			for _, i := range goFile.Interfaces {
+				if !contract.IsServerInterface(i.Name) {
+					continue
+				}
+				for _, m := range i.Methods {
+					// Find request struct
+					requestStructName := m.Params[1].Type[1:]
+					request := findGoStruct(requestStructName, goFiles)
+					if request == nil {
+						fmt.Printf("Failed to corresponding request struct in method %v\n", m.Name)
+						os.Exit(-1)
+					}
+
+					// Find response struct
+					responseStructName := m.Results[0].Type[1:]
+					response := findGoStruct(responseStructName, goFiles)
+					if response == nil {
+						fmt.Printf("Failed to corresponding response struct in method %v\n", m.Name)
+						os.Exit(-1)
+					}
+
+					contract.Methods = append(contract.Methods, impl.NewMethod(m, request, response, goBindingFile, contract.StructName))
+				}
+				break
+			}
 		}
-		break
+		contract.Write(filepath, goType+"_server.go")
 	}
-	contract.Write(filepath, goType+"_server.go")
+}
 
-	server := &impl.Server{
-		ContractName:   util.ToCamelCase(goType),
-		ProjectPackage: path.Join(packagePath, filepath),
+func findGoStruct(name string, goFiles []*parser.GoFile) *parser.GoStruct {
+	for _, g := range goFiles {
+		for _, s := range g.Structs {
+			if name == s.Name {
+				return s
+			}
+		}
 	}
-	server.Write("cmd/server", "main.go")
+	return nil
 }

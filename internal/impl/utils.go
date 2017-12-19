@@ -17,56 +17,62 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"strings"
 	"text/template"
 
 	"github.com/getamis/grpc-contract/internal/util"
 	"golang.org/x/tools/imports"
 )
 
-type Contract struct {
-	Package    string
-	Name       string
-	Methods    []*Method
-	StructName string
+type Utils struct {
+	Package string
 }
 
-func NewContract(pack string, name string) Contract {
-	c := Contract{
-		Package: pack,
-		Name:    name,
+var UtilsTemplate string = `package {{ .Package }};
+
+// TransactOpts converts to bind.TransactOpts
+func (m *TransactOpts) TransactOpts() *bind.TransactOpts {
+	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(m.PrivateKey))
+	if err != nil {
+		os.Exit(-1)
 	}
-	c.StructName = strings.ToLower(string(c.Name[0])) + c.Name[1:len(c.Name)]
-	return c
-}
-
-func (c *Contract) IsServerInterface(name string) bool {
-	if name == c.Name+"Server" {
-		return true
+	auth := bind.NewKeyedTransactor(privateKey)
+	auth.GasLimit = big.NewInt(m.GasLimit)
+	auth.GasPrice = big.NewInt(m.GasPrice)
+	if m.Nonce < 0 {
+		// get system account nonce
+		auth.Nonce = nil
+	} else {
+		auth.Nonce = big.NewInt(m.Nonce)
 	}
-	return false
+	auth.Value = big.NewInt(m.Value)
+	return auth
 }
 
-var ContractTemplate string = `package {{ .Package }};
-
-type {{ .StructName }} struct {
-	contract *{{ .Name }}
-}
-
-func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend) {{ .Name }}Server {
-	contract, _ := New{{ .Name }}(address, backend)
-	return &{{ .StructName }}{
-		contract: contract,
+// BigIntArrayToBytes converts []*big.Int to [][]byte
+func BigIntArrayToBytes(ints []*big.Int) (b [][]byte) {
+	for _, i := range ints {
+		b = append(b, i.Bytes())
 	}
+	return
 }
 
-{{ range .Methods }}
-{{ . }}
-{{ end }}
+// BytesToBigIntArray converts [][]byte to []*big.Int
+func BytesToBigIntArray(b [][]byte) (ints []*big.Int) {
+	for _, i := range b {
+		ints = append(ints, new(big.Int).SetBytes(i))
+	}
+	return
+}
+
+// BytesToBytes32 converts []byte to [32]byte
+func BytesToBytes32(b []byte) (bs [32]byte) {
+	copy(bs[:], b[:32])
+	return
+}
 `
 
-func (c *Contract) Write(filepath, filename string) {
-	implTemplate, err := template.New("contract").Parse(ContractTemplate)
+func (c *Utils) Write(filepath, filename string) {
+	implTemplate, err := template.New("utils").Parse(UtilsTemplate)
 	if err != nil {
 		fmt.Printf("Failed to parse template: %v\n", err)
 		os.Exit(-1)

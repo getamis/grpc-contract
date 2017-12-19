@@ -33,7 +33,7 @@ type Method struct {
 	Response       *parser.GoStruct
 }
 
-var methodTemplate = `func (s *server) {{ .Name }}(c context.Context, r {{ .InputType }}) (*{{ .OutputType }}, error) {
+var methodTemplate = `func (s *{{ .StructName }}) {{ .Name }}(c context.Context, r {{ .InputType }}) (*{{ .OutputType }}, error) {
 	{{ PrintBody }}
 }`
 
@@ -57,9 +57,10 @@ var methodBodyTemplate = `tx, err := s.contract.{{ .Name }}(
 		Hash: tx.Hash().Hex(),
 	}, err`
 
-func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile) *Method {
+func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile, structName string) *Method {
 	im := &Method{
-		Name: m.Name,
+		Name:       m.Name,
+		StructName: structName,
 	}
 
 	im.InputType = m.Params[1].Type

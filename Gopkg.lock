@@ -125,7 +125,7 @@
   branch = "master"
   name = "github.com/zpatrick/go-parser"
   packages = ["."]
-  revision = "7396665de2a425d4f343017a7099b1470b23eb02"
+  revision = "b6df51c1f824ed336bcf92019bf151f00c8dad90"
 
 [[projects]]
   branch = "master"
@@ -196,6 +196,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "59bf5e07243752d4f13332f2b7949ef1a57c7bdb026372b77113b60e397c0314"
+  inputs-digest = "c300bee23919d81e4aa5716704f3b9afd8ec13f42138702a39932740a2ec25f4"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -169,3 +169,20 @@ func (m Method) printBody() string {
 	}
 	return result.String()
 }
+
+type Methods []*Method
+
+// Len is part of sort.Interface.
+func (m Methods) Len() int {
+	return len(m)
+}
+
+// Swap is part of sort.Interface.
+func (m Methods) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+
+// Less is part of sort.Interface.
+func (m Methods) Less(i, j int) bool {
+	return strings.Compare(m[i].Name, m[j].Name) < 0
+}

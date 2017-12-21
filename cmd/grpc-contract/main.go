@@ -72,13 +72,14 @@ func main() {
 	grpcUtils.Write(filepath, "grpc_utils.go")
 
 	for _, goType := range goTypes {
-		goBindingFile, err := parser.ParseSingleFile(path.Join(filepath, goType+".go"))
+		file := path.Join(filepath, goType+".go")
+		goBindingFile, err := parser.ParseSingleFile(file)
 		if err != nil {
 			fmt.Printf("Failed to parse file: %v\n", err)
 			os.Exit(-1)
 		}
 
-		contract := impl.NewContract(goFiles[0].Package, util.ToCamelCase(goType))
+		contract := impl.NewContract(goFiles[0].Package, util.ToCamelCase(goType), append(files, file))
 
 		// Try to find the grpc server intreface
 		for _, goFile := range goFiles {

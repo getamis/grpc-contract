@@ -42,6 +42,7 @@ var typeMaps = map[string]map[string]string{
 	},
 	"[32]byte": {
 		"[]byte": `{{ .Input }}[:]`,
+		"string": `string({{ .Input }}[:])`,
 	},
 	"common.Address": {
 		"string": `{{ .Input }}.Hex()`,

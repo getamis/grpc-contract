@@ -32,8 +32,8 @@ package {{ .Package }};
 
 type TransactOptsFn func(m *TransactOpts) *bind.TransactOpts
 
-// defaultTransactOpts
-func defaultTransactOptsFn(m *TransactOpts) *bind.TransactOpts {
+// DefaultTransactOptsFn
+func DefaultTransactOptsFn(m *TransactOpts) *bind.TransactOpts {
 	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(m.PrivateKey))
 	if err != nil {
 		os.Exit(-1)

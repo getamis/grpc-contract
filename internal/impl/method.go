@@ -142,9 +142,14 @@ func (m Method) printBody() string {
 				},
 				"PrintOutputArgs": func() (result string) {
 					args := ""
-					for i := 0; i < len(m.Response.Fields); i++ {
-						// TODO: may add nil protection
-						args += "\n\t\t" + toResponseParam(m.ContractMethod.Results[i], m.Response.Fields[i]) + ","
+					// return multiple values
+					if len(m.Response.Fields) > 1 {
+						inner := m.ContractMethod.Results[0].Inner
+						for i := 0; i < len(m.Response.Fields); i++ {
+							args += "\n\t\t" + toResponseParam(fmt.Sprintf("data.%v", inner[i].Name), inner[i], m.Response.Fields[i]) + ","
+						}
+					} else {
+						args += "\n\t\t" + toResponseParam("data", m.ContractMethod.Results[0], m.Response.Fields[0]) + ","
 					}
 					return args
 				},

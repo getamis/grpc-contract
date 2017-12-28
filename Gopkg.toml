@@ -21,6 +21,7 @@
 #  version = "2.4.0"
 
 
-[[constraint]]
-  branch = "master"
+[[override]]
   name = "github.com/zpatrick/go-parser"
+  source = "github.com/markya0616/go-parser"
+  branch = "feature/support_struct"

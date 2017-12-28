@@ -263,6 +263,8 @@ func buildType(info *types.Info, expr ast.Expr, source []byte) *GoType {
 		innerTypes = append(innerTypes, buildTypeList(info, specType.Results, source)...)
 	case *ast.ArrayType:
 		innerTypes = append(innerTypes, buildType(info, specType.Elt, source))
+	case *ast.StructType:
+		innerTypes = append(innerTypes, buildTypeList(info, specType.Fields, source)...)
 	case *ast.MapType:
 		innerTypes = append(innerTypes, buildType(info, specType.Key, source))
 		innerTypes = append(innerTypes, buildType(info, specType.Value, source))

@@ -82,6 +82,15 @@ func BytesToBytes32(b []byte) (bs [32]byte) {
 	copy(bs[:], b[:32])
 	return
 }
+
+// BytesArrayToBytes32Array converts [][]byte to [][32]byte
+func BytesArrayToBytes32Array(b [][]byte) (bs [][32]byte) {
+	bs = make([][32]byte, len(b))
+	for i := 0; i < len(b); i++ {
+		bs[i] = BytesToBytes32(b[i])
+	}
+	return
+}
 `
 
 func (c *Utils) Write(filepath, filename string) {

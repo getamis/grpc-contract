@@ -53,12 +53,8 @@ var methodBodyTemplate = `tx, err := s.contract.{{ .Name }}(
 	if tx == nil {
 		return nil, err
 	}
-	b, err := rlp.EncodeToBytes(tx)
 	return &TransactionResp{
-		Tx: &any.Any{
-			TypeUrl: "github.com/ethereum/go-ethereum/core/types/Transaction",
-			Value: b,
-		},
+		TxHash:        tx.Hash().Hex(),
 	}, err`
 
 func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile, structName string) *Method {
@@ -146,9 +142,14 @@ func (m Method) printBody() string {
 				},
 				"PrintOutputArgs": func() (result string) {
 					args := ""
-					for i := 0; i < len(m.Response.Fields); i++ {
-						// TODO: may add nil protection
-						args += "\n\t\t" + toResponseParam(m.ContractMethod.Results[i], m.Response.Fields[i]) + ","
+					// return multiple values
+					if len(m.Response.Fields) > 1 {
+						inner := m.ContractMethod.Results[0].Inner
+						for i := 0; i < len(m.Response.Fields); i++ {
+							args += "\n\t\t" + toResponseParam(fmt.Sprintf("data.%v", inner[i].Name), inner[i], m.Response.Fields[i]) + ","
+						}
+					} else {
+						args += "\n\t\t" + toResponseParam("data", m.ContractMethod.Results[0], m.Response.Fields[0]) + ","
 					}
 					return args
 				},

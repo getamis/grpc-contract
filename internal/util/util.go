@@ -50,7 +50,7 @@ func WriteFile(content, filePath, fileName string) {
 		os.Exit(-1)
 	}
 
-	err = ioutil.WriteFile(path.Join(filePath, fileName), []byte(content), os.ModePerm)
+	err = ioutil.WriteFile(path.Join(filePath, fileName), []byte(content), 0644)
 	if err != nil {
 		fmt.Printf("Failed to write %v file: %v\n", fileName, err)
 		os.Exit(-1)

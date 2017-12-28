@@ -36,6 +36,7 @@ var typeMaps = map[string]map[string]string{
 	},
 	"[][]byte": {
 		"[]*big.Int": `BytesToBigIntArray({{ .Input }})`,
+		"[][32]byte": `BytesArrayToBytes32Array({{ .Input }})`,
 	},
 	"[]*big.Int": {
 		"[][]byte": `BigIntArrayToBytes({{ .Input }})`,
@@ -91,8 +92,8 @@ func toRequestParam(f *parser.GoField, t *parser.GoType) string {
 	return typeMapping.String()
 }
 
-func toResponseParam(t *parser.GoType, f *parser.GoField) string {
-	typeMapping := NewTypeMap("data", t.Type, f.Type)
+func toResponseParam(input string, t *parser.GoType, f *parser.GoField) string {
+	typeMapping := NewTypeMap(input, t.Type, f.Type)
 	if typeMapping == nil {
 		panic("cannot find corresponding response type, from: " + t.Type + ", to: " + f.Type)
 	}

@@ -73,7 +73,7 @@ func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend, 
 		transactOptsFn: transactOptsFn,
 	}
 	if transactOptsFn == nil {
-		service.transactOptsFn = defaultTransactOptsFn
+		service.transactOptsFn = DefaultTransactOptsFn
 	}
 	return service
 }

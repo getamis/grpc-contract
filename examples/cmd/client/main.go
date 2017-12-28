@@ -55,8 +55,7 @@ func main() {
 		fmt.Printf("Failed to set name: %v\n", err)
 		os.Exit(1)
 	}
-	tx, _ := contracts.AnyToTransaction(res.Tx)
-	fmt.Printf("Set name in tx: %v\n", tx.Hash().Hex())
+	fmt.Printf("Set name in tx: %v\n", res.TxHash)
 
 	// wait for mining
 	<-time.After(2 * time.Second)

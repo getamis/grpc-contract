@@ -53,12 +53,8 @@ var methodBodyTemplate = `tx, err := s.contract.{{ .Name }}(
 	if tx == nil {
 		return nil, err
 	}
-	b, err := rlp.EncodeToBytes(tx)
 	return &TransactionResp{
-		Tx: &any.Any{
-			TypeUrl: "github.com/ethereum/go-ethereum/core/types/Transaction",
-			Value: b,
-		},
+		TxHash:        tx.Hash().Hex(),
 	}, err`
 
 func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile, structName string) *Method {

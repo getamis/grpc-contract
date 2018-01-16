@@ -19,6 +19,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/getamis/grpc-contract/internal/util"
 	parser "github.com/zpatrick/go-parser"
 )
 
@@ -27,6 +28,7 @@ type Method struct {
 	Name       string
 	InputType  string
 	OutputType string
+	PBPackage  string
 
 	ContractMethod *parser.GoStructMethod
 	Request        *parser.GoStruct
@@ -53,11 +55,11 @@ var methodBodyTemplate = `tx, err := s.contract.{{ .Name }}(
 	if tx == nil {
 		return nil, err
 	}
-	return &TransactionResp{
+	return &{{ .PBPackage | formatPackage }}TransactionResp{
 		TxHash:        tx.Hash().Hex(),
 	}, err`
 
-func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile, structName string) *Method {
+func NewMethod(pbPackage string, m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruct *parser.GoStruct, goFile *parser.GoFile, structName string) *Method {
 	im := &Method{
 		Name:       m.Name,
 		StructName: structName,
@@ -90,6 +92,13 @@ func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruc
 		return nil
 	}
 
+	// update input/output struct with pb package
+	if pbPackage != "" {
+		im.InputType = fmt.Sprintf("*%v.%v", pbPackage, im.InputType[1:])
+		im.OutputType = fmt.Sprintf("%v.%v", pbPackage, im.OutputType)
+	}
+
+	im.PBPackage = pbPackage
 	im.ContractMethod = goSM
 	im.Request = requestStruct
 	im.Response = responseStruct
@@ -97,7 +106,7 @@ func NewMethod(m *parser.GoMethod, requestStruct *parser.GoStruct, responseStruc
 }
 
 func (m Method) isConstant() bool {
-	if m.OutputType == "TransactionResp" {
+	if strings.HasSuffix(m.OutputType, "TransactionResp") {
 		return false
 	}
 	return true
@@ -153,6 +162,7 @@ func (m Method) printBody() string {
 					}
 					return args
 				},
+				"formatPackage": util.FormatPackage,
 			})).Parse(constMethodBodyTemplate)
 		tmpl.Execute(result, m)
 	} else {
@@ -165,6 +175,7 @@ func (m Method) printBody() string {
 					}
 					return args
 				},
+				"formatPackage": util.FormatPackage,
 			})).Parse(methodBodyTemplate)
 		tmpl.Execute(result, m)
 	}

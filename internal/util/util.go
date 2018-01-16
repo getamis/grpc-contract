@@ -56,3 +56,10 @@ func WriteFile(content, filePath, fileName string) {
 		os.Exit(-1)
 	}
 }
+
+func FormatPackage(name string) string {
+	if name == "" {
+		return ""
+	}
+	return fmt.Sprintf("%v.", name)
+}

@@ -18,7 +18,7 @@ run:
 	mv *.proto contracts
 	protoc --go_out=plugins=grpc:./contracts -I contracts contracts/*.proto
 	abigen --type $(name) --abi $(name).abi --pkg contracts --out ./contracts/$(filename).go --bin $(name).bin
-	grpc-contract --types $(filename) --path ./contracts
+	grpc-contract --types $(filename) --path ./contracts --pb-path ./contracts
 
 server:
 	go build -v -o ./build/bin/server ./cmd/server

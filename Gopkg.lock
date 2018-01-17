@@ -50,8 +50,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/getamis/sol2proto"
-  packages = ["util"]
-  revision = "af45ea623b981372cff7636d5e726dca8407331e"
+  packages = ["pb"]
+  revision = "6cfda209b32c847a9f4d2f54ee22f32ca57306e8"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -163,11 +163,10 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "feature/support_struct"
+  branch = "master"
   name = "github.com/zpatrick/go-parser"
   packages = ["."]
-  revision = "6d1788faf1ca0bbadb82259082a682e7dbfa5c37"
-  source = "github.com/markya0616/go-parser"
+  revision = "524d1e8c73c1e408fbf2dd5506bd1aa62a473acd"
 
 [[projects]]
   branch = "master"
@@ -291,6 +290,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "37905142de05b6d1b67e9e3a252b21517f97c2684a3c05dcfae732e2c9d9ec50"
+  inputs-digest = "eaa7e56ccfa1b18689a318a17e840cba0c2d67bb2713f868d67d1ddc6bf406ad"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -67,6 +67,12 @@ func main() {
 		os.Exit(-1)
 	}
 
+	// create a map to search quickly
+	pbFilesMap := make(map[string]*parser.GoFile)
+	for i, p := range pbFiles {
+		pbFilesMap[p] = pbGoFiles[i]
+	}
+
 	// find pb package
 	var pbPackage string
 	if filepath == pbPath {
@@ -75,14 +81,8 @@ func main() {
 		pbPackage = pbGoFiles[0].Package
 	}
 
-	// save the util functions into contract folder
+	// find contract package
 	pack := path.Base(filepath)
-	grpcUtils := impl.Utils{
-		Package:   pack,
-		PBPackage: pbPackage,
-	}
-	grpcUtils.Write(filepath, "grpc_utils.go")
-
 	for _, goType := range goTypes {
 		file := path.Join(filepath, goType+".go")
 		goBindingFile, err := parser.ParseSingleFile(file)
@@ -91,46 +91,73 @@ func main() {
 			os.Exit(-1)
 		}
 
-		contract := impl.NewContract(pack, pbPackage, util.ToCamelCase(goType), append(pbFiles, file))
+		contract := impl.NewContract(pack, pbPackage,
+			util.ToCamelCase(goType),
+			[]string{
+				file,
+				path.Join(pbPath, goType+".pb.go"),
+				path.Join(pbPath, "messages.pb.go"),
+			})
 
-		// Try to find the grpc server intreface
-		for _, goFile := range pbGoFiles {
-			for _, i := range goFile.Interfaces {
-				if !contract.IsServerInterface(i.Name) {
-					continue
-				}
-				for _, m := range i.Methods {
-					// Find request struct
-					requestStructName := m.Params[1].Type[1:]
-					request := findGoStruct(requestStructName, pbGoFiles)
-					if request == nil {
-						fmt.Printf("Failed to corresponding request struct in method %v\n", m.Name)
-						os.Exit(-1)
-					}
-
-					// Find response struct
-					responseStructName := m.Results[0].Type[1:]
-					response := findGoStruct(responseStructName, pbGoFiles)
-					if response == nil {
-						fmt.Printf("Failed to corresponding response struct in method %v\n", m.Name)
-						os.Exit(-1)
-					}
-
-					contract.Methods = append(contract.Methods, impl.NewMethod(pbPackage, m, request, response, goBindingFile, contract.StructName))
-				}
+		// find the corresponding server interface
+		f, ok := pbFilesMap[contract.Sources[1]]
+		if !ok {
+			fmt.Printf("Failed to load corresponding source file for service %v\n", goType)
+			os.Exit(-1)
+		}
+		var serverInterface *parser.GoInterface
+		for _, i := range f.Interfaces {
+			if contract.IsServerInterface(i.Name) {
+				serverInterface = i
 				break
 			}
+		}
+		if serverInterface == nil {
+			fmt.Printf("Failed to load corresponding server interface for service %v\n", goType)
+			os.Exit(-1)
+		}
+
+		// find the corresponding server interface
+		f, ok = pbFilesMap[contract.Sources[2]]
+		if !ok {
+			fmt.Printf("Failed to find corresponding server interface %v\n", goType)
+			os.Exit(-1)
+		}
+
+		// Try to find the grpc server intreface
+		for _, m := range serverInterface.Methods {
+			// Find request struct
+			requestStructName := m.Params[1].Type[1:]
+			request := findGoStruct(requestStructName, f)
+			if request == nil {
+				fmt.Printf("Failed to load corresponding request struct in method %v\n", m.Name)
+				os.Exit(-1)
+			}
+
+			// Find response struct
+			responseStructName := m.Results[0].Type[1:]
+			response := findGoStruct(responseStructName, f)
+			if response == nil {
+				fmt.Printf("Failed to load corresponding response struct in method %v\n", m.Name)
+				os.Exit(-1)
+			}
+
+			contract.Methods = append(contract.Methods, impl.NewMethod(pbPackage, m, request, response, goBindingFile, contract.StructName))
 		}
 		contract.Write(filepath, goType+"_server.go")
 	}
 }
 
-func findGoStruct(name string, goFiles []*parser.GoFile) *parser.GoStruct {
-	for _, g := range goFiles {
-		for _, s := range g.Structs {
-			if name == s.Name {
-				return s
-			}
+func findGoStruct(name string, goFile *parser.GoFile) *parser.GoStruct {
+	// retrun empty struct to handle default types
+	if name == "TransactionResp" || name == "Empty" {
+		return &parser.GoStruct{
+			Name: name,
+		}
+	}
+	for _, s := range goFile.Structs {
+		if name == s.Name {
+			return s
 		}
 	}
 	return nil

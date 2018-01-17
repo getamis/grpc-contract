@@ -61,17 +61,17 @@ package {{ .Package }};
 
 type {{ .StructName }} struct {
 	contract *{{ .Name }}
-	transactOptsFn TransactOptsFn
+	transactOptsFn grpc.TransactOptsFn
 }
 
-func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend, transactOptsFn TransactOptsFn) {{ .PBPackage | formatPackage }}{{ .Name }}Server {
+func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend, transactOptsFn grpc.TransactOptsFn) {{ .PBPackage | formatPackage }}{{ .Name }}Server {
 	contract, _ := New{{ .Name }}(address, backend)
 	service := &{{ .StructName }}{
 		contract:     contract,
 		transactOptsFn: transactOptsFn,
 	}
 	if transactOptsFn == nil {
-		service.transactOptsFn = DefaultTransactOptsFn
+		service.transactOptsFn = grpc.DefaultTransactOptsFn
 	}
 	return service
 }

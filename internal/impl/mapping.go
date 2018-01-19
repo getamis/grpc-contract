@@ -25,7 +25,7 @@ import (
 var typeMaps = map[string]map[string]string{
 	"[]byte": {
 		"*big.Int": `new(big.Int).SetBytes({{ .Input }})`,
-		"[32]byte": `BytesToBytes32({{ .Input }})`,
+		"[32]byte": `grpc.BytesToBytes32({{ .Input }})`,
 	},
 	"string": {
 		"common.Address": `common.HexToAddress({{ .Input }})`,
@@ -35,11 +35,11 @@ var typeMaps = map[string]map[string]string{
 		"[]byte": `{{ .Input }}.Bytes()`,
 	},
 	"[][]byte": {
-		"[]*big.Int": `BytesToBigIntArray({{ .Input }})`,
-		"[][32]byte": `BytesArrayToBytes32Array({{ .Input }})`,
+		"[]*big.Int": `grpc.BytesToBigIntArray({{ .Input }})`,
+		"[][32]byte": `grpc.BytesArrayToBytes32Array({{ .Input }})`,
 	},
 	"[]*big.Int": {
-		"[][]byte": `BigIntArrayToBytes({{ .Input }})`,
+		"[][]byte": `grpc.BigIntArrayToBytes({{ .Input }})`,
 	},
 	"[32]byte": {
 		"[]byte": `{{ .Input }}[:]`,

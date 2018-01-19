@@ -52,7 +52,9 @@ func parseFile(path string, file *ast.File, fset *token.FileSet, files []*ast.Fi
 		return nil, err
 	}
 
-	conf := types.Config{Importer: importer.Default()}
+	// To import sources from vendor, we use "source" compile
+	// https://github.com/golang/go/issues/11415#issuecomment-283445198
+	conf := types.Config{Importer: importer.For("source", nil)}
 	info := &types.Info{
 		Types: make(map[ast.Expr]types.TypeAndValue),
 		Defs:  make(map[*ast.Ident]types.Object),

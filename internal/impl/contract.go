@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path"
 	"sort"
 	"strings"
 	"text/template"
@@ -28,22 +27,21 @@ import (
 
 type Contract struct {
 	Package    string
+	PBPackage  string
 	Name       string
 	Methods    Methods
 	StructName string
 	Sources    Sources
 }
 
-func NewContract(pack string, name string, sources Sources) Contract {
+func NewContract(pack, pbPack, name string, sources Sources) Contract {
 	c := Contract{
-		Package: pack,
-		Name:    name,
-		Sources: make([]string, len(sources)),
+		Package:   pack,
+		PBPackage: pbPack,
+		Name:      name,
+		Sources:   sources,
 	}
 	c.StructName = strings.ToLower(string(c.Name[0])) + c.Name[1:len(c.Name)]
-	for i, s := range sources {
-		_, c.Sources[i] = path.Split(s)
-	}
 	return c
 }
 
@@ -63,17 +61,17 @@ package {{ .Package }};
 
 type {{ .StructName }} struct {
 	contract *{{ .Name }}
-	transactOptsFn TransactOptsFn
+	transactOptsFn grpc.TransactOptsFn
 }
 
-func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend, transactOptsFn TransactOptsFn) {{ .Name }}Server {
+func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend, transactOptsFn grpc.TransactOptsFn) {{ .PBPackage | formatPackage }}{{ .Name }}Server {
 	contract, _ := New{{ .Name }}(address, backend)
 	service := &{{ .StructName }}{
 		contract:     contract,
 		transactOptsFn: transactOptsFn,
 	}
 	if transactOptsFn == nil {
-		service.transactOptsFn = DefaultTransactOptsFn
+		service.transactOptsFn = grpc.DefaultTransactOptsFn
 	}
 	return service
 }
@@ -86,7 +84,9 @@ func New{{ .Name }}Server(address common.Address, backend bind.ContractBackend, 
 func (c *Contract) Write(filepath, filename string) {
 	sort.Sort(c.Sources)
 	sort.Sort(c.Methods)
-	implTemplate, err := template.New("contract").Parse(ContractTemplate)
+	implTemplate, err := template.New("contract").Funcs(template.FuncMap{
+		"formatPackage": util.FormatPackage,
+	}).Parse(ContractTemplate)
 	if err != nil {
 		fmt.Printf("Failed to parse template: %v\n", err)
 		os.Exit(-1)

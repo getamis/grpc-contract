@@ -118,7 +118,12 @@ function SocketTransport() {
 	var id = 0;
 	var outputs = {};
 	var started = {};
-	var websocket = new WebSocket('ws://' + window.location.host + '/socket');
+	var websocket;
+	if (window.location.protocol == "http:") {
+		websocket = new WebSocket('ws://' + window.location.host + '/socket');
+	} else if (window.location.protocol == "https:") {
+		websocket = new WebSocket('wss://' + window.location.host + '/socket');
+	}
 
 	websocket.onclose = function() {
 		console.log('websocket connection closed');
@@ -403,6 +408,7 @@ function PlaygroundOutput(el) {
         processData: false,
         data: sharingData,
         type: "POST",
+        contentType: "text/plain; charset=utf-8",
         complete: function(xhr) {
           sharing = false;
           if (xhr.status != 200) {

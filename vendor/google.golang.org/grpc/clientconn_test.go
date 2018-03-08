@@ -169,11 +169,12 @@ func TestDialWaitsForServerSettings(t *testing.T) {
 }
 
 func TestCloseConnectionWhenServerPrefaceNotReceived(t *testing.T) {
-	defer leakcheck.Check(t)
 	mctBkp := minConnectTimeout
+	// Call this only after transportMonitor goroutine has ended.
 	defer func() {
 		minConnectTimeout = mctBkp
 	}()
+	defer leakcheck.Check(t)
 	minConnectTimeout = time.Millisecond * 500
 	server, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -247,6 +248,21 @@ func TestCloseConnectionWhenServerPrefaceNotReceived(t *testing.T) {
 		t.Fatalf("Error while dialing. Err: %v", err)
 	}
 	<-done
+	// TODO: The code from BEGIN to END should be delete once issue
+	// https://github.com/grpc/grpc-go/issues/1750 is fixed.
+	// BEGIN
+	// Set underlying addrConns state to Shutdown so that no reconnect
+	// attempts take place and thereby resetting minConnectTimeout is
+	// race free.
+	client.mu.Lock()
+	addrConns := client.conns
+	client.mu.Unlock()
+	for ac := range addrConns {
+		ac.mu.Lock()
+		ac.state = connectivity.Shutdown
+		ac.mu.Unlock()
+	}
+	// END
 	client.Close()
 	close(clientDone)
 }
@@ -631,7 +647,7 @@ func TestClientUpdatesParamsAfterGoAway(t *testing.T) {
 	defer s.Stop()
 	cc, err := Dial(addr, WithBlock(), WithInsecure(), WithKeepaliveParams(keepalive.ClientParameters{
 		Time:                50 * time.Millisecond,
-		Timeout:             1 * time.Millisecond,
+		Timeout:             100 * time.Millisecond,
 		PermitWithoutStream: true,
 	}))
 	if err != nil {

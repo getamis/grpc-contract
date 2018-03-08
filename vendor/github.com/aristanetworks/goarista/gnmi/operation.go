@@ -7,11 +7,15 @@ package gnmi
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"path"
+	"strconv"
+	"strings"
 
 	pb "github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc/codes"
@@ -30,7 +34,7 @@ func Get(ctx context.Context, client pb.GNMIClient, paths [][]string) error {
 	for _, notif := range resp.Notification {
 		for _, update := range notif.Update {
 			fmt.Printf("%s:\n", StrPath(update.Path))
-			fmt.Println(strUpdateVal(update))
+			fmt.Println(StrUpdateVal(update))
 		}
 	}
 	return nil
@@ -55,49 +59,104 @@ func Capabilities(ctx context.Context, client pb.GNMIClient) error {
 // val may be a path to a file or it may be json. First see if it is a
 // file, if so return its contents, otherwise return val
 func extractJSON(val string) []byte {
-	jsonBytes, err := ioutil.ReadFile(val)
-	if err != nil {
-		jsonBytes = []byte(val)
+	if jsonBytes, err := ioutil.ReadFile(val); err == nil {
+		return jsonBytes
 	}
-	return jsonBytes
+	// Best effort check if the value might a string literal, in which
+	// case wrap it in quotes. This is to allow a user to do:
+	//   gnmi update ../hostname host1234
+	//   gnmi update ../description 'This is a description'
+	// instead of forcing them to quote the string:
+	//   gnmi update ../hostname '"host1234"'
+	//   gnmi update ../description '"This is a description"'
+	maybeUnquotedStringLiteral := func(s string) bool {
+		if s == "true" || s == "false" || s == "null" || // JSON reserved words
+			strings.ContainsAny(s, `"'{}[]`) { // Already quoted or is a JSON object or array
+			return false
+		} else if _, err := strconv.ParseInt(s, 0, 32); err == nil {
+			// Integer. Using byte size of 32 because larger integer
+			// types are supposed to be sent as strings in JSON.
+			return false
+		} else if _, err := strconv.ParseFloat(s, 64); err == nil {
+			// Float
+			return false
+		}
+
+		return true
+	}
+	if maybeUnquotedStringLiteral(val) {
+		out := make([]byte, len(val)+2)
+		out[0] = '"'
+		copy(out[1:], val)
+		out[len(out)-1] = '"'
+		return out
+	}
+	return []byte(val)
 }
 
-// strUpdateVal will return a string representing the value within the supplied update
-func strUpdateVal(u *pb.Update) string {
+// StrUpdateVal will return a string representing the value within the supplied update
+func StrUpdateVal(u *pb.Update) string {
 	if u.Value != nil {
-		return string(u.Value.Value) // Backwards compatibility with pre-v0.4 gnmi
+		// Backwards compatibility with pre-v0.4 gnmi
+		switch u.Value.Type {
+		case pb.Encoding_JSON, pb.Encoding_JSON_IETF:
+			return strJSON(u.Value.Value)
+		case pb.Encoding_BYTES, pb.Encoding_PROTO:
+			return base64.StdEncoding.EncodeToString(u.Value.Value)
+		case pb.Encoding_ASCII:
+			return string(u.Value.Value)
+		default:
+			return string(u.Value.Value)
+		}
 	}
-	return strVal(u.Val)
+	return StrVal(u.Val)
 }
 
-// strVal will return a string representing the supplied value
-func strVal(val *pb.TypedValue) string {
+// StrVal will return a string representing the supplied value
+func StrVal(val *pb.TypedValue) string {
 	switch v := val.GetValue().(type) {
 	case *pb.TypedValue_StringVal:
 		return v.StringVal
 	case *pb.TypedValue_JsonIetfVal:
-		return string(v.JsonIetfVal)
+		return strJSON(v.JsonIetfVal)
+	case *pb.TypedValue_JsonVal:
+		return strJSON(v.JsonVal)
 	case *pb.TypedValue_IntVal:
-		return fmt.Sprintf("%v", v.IntVal)
+		return strconv.FormatInt(v.IntVal, 10)
 	case *pb.TypedValue_UintVal:
-		return fmt.Sprintf("%v", v.UintVal)
+		return strconv.FormatUint(v.UintVal, 10)
 	case *pb.TypedValue_BoolVal:
-		return fmt.Sprintf("%v", v.BoolVal)
+		return strconv.FormatBool(v.BoolVal)
 	case *pb.TypedValue_BytesVal:
-		return string(v.BytesVal)
+		return base64.StdEncoding.EncodeToString(v.BytesVal)
 	case *pb.TypedValue_DecimalVal:
 		return strDecimal64(v.DecimalVal)
+	case *pb.TypedValue_FloatVal:
+		return strconv.FormatFloat(float64(v.FloatVal), 'g', -1, 32)
 	case *pb.TypedValue_LeaflistVal:
 		return strLeaflist(v.LeaflistVal)
+	case *pb.TypedValue_AsciiVal:
+		return v.AsciiVal
+	case *pb.TypedValue_AnyVal:
+		return v.AnyVal.String()
 	default:
 		panic(v)
 	}
 }
 
+func strJSON(inJSON []byte) string {
+	var out bytes.Buffer
+	err := json.Indent(&out, inJSON, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("(error unmarshalling json: %s)\n", err) + string(inJSON)
+	}
+	return out.String()
+}
+
 func strDecimal64(d *pb.Decimal64) string {
-	var i, frac uint64
+	var i, frac int64
 	if d.Precision > 0 {
-		div := uint64(10)
+		div := int64(10)
 		it := d.Precision - 1
 		for it > 0 {
 			div *= 10
@@ -108,32 +167,25 @@ func strDecimal64(d *pb.Decimal64) string {
 	} else {
 		i = d.Digits
 	}
+	if frac < 0 {
+		frac = -frac
+	}
 	return fmt.Sprintf("%d.%d", i, frac)
 }
 
-// strLeafList builds a human-readable form of a leaf-list. e.g. [1,2,3] or [a,b,c]
+// strLeafList builds a human-readable form of a leaf-list. e.g. [1, 2, 3] or [a, b, c]
 func strLeaflist(v *pb.ScalarArray) string {
-	s := make([]string, 0, len(v.Element))
-	sz := 2 // []
+	var buf bytes.Buffer
+	buf.WriteByte('[')
 
-	// convert arbitrary TypedValues to string form
-	for _, elm := range v.Element {
-		str := strVal(elm)
-		s = append(s, str)
-		sz += len(str) + 1 // %v + ,
-	}
-
-	b := make([]byte, sz)
-	buf := bytes.NewBuffer(b)
-
-	buf.WriteRune('[')
-	for i := range v.Element {
-		buf.WriteString(s[i])
+	for i, elm := range v.Element {
+		buf.WriteString(StrVal(elm))
 		if i < len(v.Element)-1 {
-			buf.WriteRune(',')
+			buf.WriteString(", ")
 		}
 	}
-	buf.WriteRune(']')
+
+	buf.WriteByte(']')
 	return buf.String()
 }
 
@@ -244,7 +296,7 @@ func LogSubscribeResponse(response *pb.SubscribeResponse) error {
 		prefix := StrPath(resp.Update.Prefix)
 		for _, update := range resp.Update.Update {
 			fmt.Printf("%s = %s\n", path.Join(prefix, StrPath(update.Path)),
-				strUpdateVal(update))
+				StrUpdateVal(update))
 		}
 	}
 	return nil

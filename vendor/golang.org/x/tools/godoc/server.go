@@ -7,6 +7,7 @@ package godoc
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/build"
@@ -199,11 +200,12 @@ func (h *handlerServer) GetPageInfo(abspath, relpath string, mode PageInfoMode, 
 		timestamp = ts
 	}
 	if dir == nil {
-		// no directory tree present (too early after startup or
-		// command-line mode); compute one level for this page
+		// no directory tree present (happens in command-line mode);
+		// compute 2 levels for this page. The second level is to
+		// get the synopses of sub-directories.
 		// note: cannot use path filter here because in general
-		//       it doesn't contain the FSTree path
-		dir = h.c.newDirectory(abspath, 1)
+		// it doesn't contain the FSTree path
+		dir = h.c.newDirectory(abspath, 2)
 		timestamp = time.Now()
 	}
 	info.Dirs = dir.listing(true, func(path string) bool { return h.includePath(path, mode) })
@@ -248,6 +250,12 @@ func (h *handlerServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	relpath := pathpkg.Clean(r.URL.Path[len(h.stripPrefix)+1:])
+
+	if !h.corpusInitialized() {
+		h.p.ServeError(w, r, relpath, errors.New("Scan is not yet complete. Please retry after a few moments"))
+		return
+	}
+
 	abspath := pathpkg.Join(h.fsRoot, relpath)
 	mode := h.p.GetPageInfoMode(r)
 	if relpath == builtinPkgPath {
@@ -320,6 +328,12 @@ func (h *handlerServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Body:     applyTemplate(h.p.PackageHTML, "packageHTML", info),
 		GoogleCN: info.GoogleCN,
 	})
+}
+
+func (h *handlerServer) corpusInitialized() bool {
+	h.c.initMu.RLock()
+	defer h.c.initMu.RUnlock()
+	return h.c.initDone
 }
 
 type PageInfoMode uint
@@ -631,7 +645,7 @@ func formatGoSource(buf *bytes.Buffer, text []byte, links []analysis.Link, patte
 		// The first tab for the code snippet needs to start in column 9, so
 		// it indents a full 8 spaces, hence the two nbsp's. Otherwise the tab
 		// character only indents about two spaces.
-		fmt.Fprintf(saved, `<span id="L%d" class="ln" data-content="%6d">&nbsp;&nbsp;</span>`, n, n)
+		fmt.Fprintf(saved, `<span id="L%d" class="ln">%6d&nbsp;&nbsp;</span>`, n, n)
 		n++
 		saved.Write(line)
 		saved.WriteByte('\n')

@@ -21,9 +21,9 @@ func DefaultTransactOptsFn(m *pb.TransactOpts) *bind.TransactOpts {
 	auth := bind.NewKeyedTransactor(privateKey)
 	if m.GasLimit < 0 {
 		// get system suggested gas limit
-		auth.GasLimit = nil
+		auth.GasLimit = 0
 	} else {
-		auth.GasLimit = big.NewInt(m.GasLimit)
+		auth.GasLimit = uint64(m.GasLimit)
 	}
 
 	if m.GasPrice < 0 {

@@ -1,4 +1,4 @@
-// Copyright 2017 The Go Authors. All rights reserved.
+// Copyright 2018 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -502,7 +502,7 @@ var Files = map[string]string{
 {{if .Playground}}
 <a id="playgroundButton" href="http://play.golang.org/" title="Show Go Playground">Play</a>
 {{end}}
-<span class="search-box"><input type="search" id="search" name="q" placeholder="Search" aria-label="Search" required><button type="submit"><span><svg width="24" height="24" viewBox="0 0 24 24"><title>submit search</title><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M0 0h24v24H0z" fill="none"/></svg></span></button></span>
+<span class="search-box"><input type="search" id="search" name="q" placeholder="Search" aria-label="Search" required><button type="submit"><span><!-- magnifying glass: --><svg width="24" height="24" viewBox="0 0 24 24"><title>submit search</title><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M0 0h24v24H0z" fill="none"/></svg></span></button></span>
 </div>
 </form>
 
@@ -766,7 +766,7 @@ function setupInlinePlayground() {
 			code.on('keyup', resize);
 			code.keyup(); // resize now.
 		};
-		
+
 		// If example already visible, set up playground now.
 		if ($(el).is(':visible')) {
 			setup();
@@ -870,7 +870,7 @@ function personalizeInstallInstructions() {
     $('.testWindows').show();
   }
 
-  var download = "https://storage.googleapis.com/golang/" + filename;
+  var download = "https://dl.google.com/go/" + filename;
 
   var message = $('<p class="downloading">'+
     'Your download should begin shortly. '+
@@ -2314,7 +2314,12 @@ function SocketTransport() {
 	var id = 0;
 	var outputs = {};
 	var started = {};
-	var websocket = new WebSocket('ws://' + window.location.host + '/socket');
+	var websocket;
+	if (window.location.protocol == "http:") {
+		websocket = new WebSocket('ws://' + window.location.host + '/socket');
+	} else if (window.location.protocol == "https:") {
+		websocket = new WebSocket('wss://' + window.location.host + '/socket');
+	}
 
 	websocket.onclose = function() {
 		console.log('websocket connection closed');
@@ -2599,6 +2604,7 @@ function PlaygroundOutput(el) {
         processData: false,
         data: sharingData,
         type: "POST",
+        contentType: "text/plain; charset=utf-8",
         complete: function(xhr) {
           sharing = false;
           if (xhr.status != 200) {
@@ -2914,11 +2920,7 @@ pre .ln {
 	-ms-user-select: none;
 	user-select: none;
 }
-.ln::before {
-	/* Inserting the line numbers as a ::before pseudo-element avoids making
-	 * them selectable; it's the trick Github uses as well. */
-	content: attr(data-content);
-}
+
 body {
 	color: #222;
 }
@@ -3183,7 +3185,9 @@ input#search + button {
 	background-color: #375EAB;
 	color: white;
 	border: 1px solid #375EAB;
+	border-top-left-radius: 0;
 	border-top-right-radius: 5px;
+	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 5px;
 	margin-left: 0;
 	cursor: pointer;

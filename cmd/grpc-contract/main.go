@@ -148,9 +148,18 @@ func main() {
 	}
 }
 
+var (
+	predefinedStructs = map[string]struct{}{
+		"TransactionResp": struct{}{},
+		"Empty":           struct{}{},
+		"TransactionReq":  struct{}{},
+	}
+)
+
 func findGoStruct(name string, goFile *parser.GoFile) *parser.GoStruct {
 	// retrun empty struct to handle default types
-	if name == "TransactionResp" || name == "Empty" {
+	_, ok := predefinedStructs[name]
+	if ok {
 		return &parser.GoStruct{
 			Name: name,
 		}

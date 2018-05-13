@@ -28,3 +28,7 @@
 [[constraint]]
   name = "github.com/getamis/sol2proto"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/ethereum/go-ethereum"
+  version = "v1.8.7"

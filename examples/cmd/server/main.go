@@ -69,7 +69,7 @@ func main() {
 			os.Exit(-1)
 		}
 		auth := bind.NewKeyedTransactor(key)
-		auth.GasLimit = big.NewInt(int64(4712388))
+		auth.GasLimit = uint64(4712388)
 		// get nonce
 		nonce, err := conn.NonceAt(context.Background(), auth.From, nil)
 		if err != nil {

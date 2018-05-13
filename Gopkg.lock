@@ -14,6 +14,12 @@
   revision = "2e60448ffcc6bf78332d1fe590260095f554dd78"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/ethereum/go-ethereum"
   packages = [
     ".",
@@ -31,15 +37,18 @@
     "crypto/secp256k1",
     "crypto/sha3",
     "ethclient",
+    "ethdb",
     "event",
     "log",
+    "metrics",
+    "p2p/netutil",
     "params",
     "rlp",
     "rpc",
     "trie"
   ]
-  revision = "4bb3c89d44e372e6a9ab85a8be0c9345265c763a"
-  version = "v1.7.3"
+  revision = "66432f3821badf24d526f2d9205f36c0543219de"
+  version = "v1.8.7"
 
 [[projects]]
   name = "github.com/fsnotify/fsnotify"
@@ -70,6 +79,12 @@
     "ptypes/timestamp"
   ]
   revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "553a641470496b2327abcac10b36396bd98e45c9"
 
 [[projects]]
   branch = "master"
@@ -112,10 +127,10 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/rcrowley/go-metrics"
-  packages = ["."]
-  revision = "e181e095bae94582363434144c61a9653aff6e50"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -161,6 +176,31 @@
   packages = ["."]
   revision = "25b30aa063fc18e48662b86996252eabdcf2f0c7"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "v1.2.1"
+
+[[projects]]
+  branch = "issue128"
+  name = "github.com/syndtr/goleveldb"
+  packages = [
+    "leveldb",
+    "leveldb/cache",
+    "leveldb/comparer",
+    "leveldb/errors",
+    "leveldb/filter",
+    "leveldb/iterator",
+    "leveldb/journal",
+    "leveldb/memdb",
+    "leveldb/opt",
+    "leveldb/storage",
+    "leveldb/table",
+    "leveldb/util"
+  ]
+  revision = "5b30db931a38c0c4557e89849cfcf2e7a7c0333a"
 
 [[projects]]
   branch = "master"
@@ -290,6 +330,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "eaa7e56ccfa1b18689a318a17e840cba0c2d67bb2713f868d67d1ddc6bf406ad"
+  inputs-digest = "aa5aa61160927ef04f705c39148d18a9c3b36de15d7fea4cbe4c52794adb63e1"
   solver-name = "gps-cdcl"
   solver-version = 1

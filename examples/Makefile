@@ -16,7 +16,7 @@ run:
 	mkdir -p contracts
 	sol2proto --pkg contracts --abi $(name).abi
 	mv *.proto contracts
-	protoc --go_out=plugins=grpc:./contracts -I contracts contracts/*.proto
+	protoc --go_out=plugins=grpc:./contracts -I contracts -I ./src/ contracts/*.proto
 	abigen --type $(name) --abi $(name).abi --pkg contracts --out ./contracts/$(filename).go --bin $(name).bin
 	grpc-contract --types $(filename) --path ./contracts --pb-path ./contracts
 

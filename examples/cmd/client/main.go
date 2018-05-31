@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/getamis/grpc-contract/examples/contracts"
+	contracts "github.com/getamis/grpc-contract/examples/pb"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"

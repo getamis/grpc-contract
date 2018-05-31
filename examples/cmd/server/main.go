@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/getamis/grpc-contract/examples/contracts"
+	contracts "github.com/getamis/grpc-contract/examples/pb"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"

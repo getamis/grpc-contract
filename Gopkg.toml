@@ -28,3 +28,19 @@
 [[constraint]]
   name = "github.com/getamis/sol2proto"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/ethereum/go-ethereum"
+  version = "=1.7.3"
+
+[[constraint]]
+  name = "github.com/spf13/pflag"
+  version = "=1.0.1"
+
+[[constraint]]
+  name = "google.golang.org/grpc"
+  version = "=1.12.0"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+  version = "=1.0.2"

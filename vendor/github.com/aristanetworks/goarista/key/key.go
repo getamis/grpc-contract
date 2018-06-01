@@ -16,14 +16,15 @@ import (
 // Key represents the Key in the updates and deletes of the Notification
 // objects.  The only reason this exists is that Go won't let us define
 // our own hash function for non-hashable types, and unfortunately we
-// need to be able to index maps by map[string]interface{} objects.
+// need to be able to index maps by map[string]interface{} objects
+// and slices by []interface{} objects.
 type Key interface {
 	Key() interface{}
 	String() string
 	Equal(other interface{}) bool
 }
 
-type keyImpl struct {
+type interfaceKey struct {
 	key interface{}
 }
 
@@ -50,7 +51,9 @@ type boolKey bool
 func New(intf interface{}) Key {
 	switch t := intf.(type) {
 	case map[string]interface{}:
-		return composite{sentinel, t}
+		return compositeKey{sentinel: sentinel, m: t}
+	case []interface{}:
+		return compositeKey{sentinel: sentinel, s: t}
 	case string:
 		return strKey(t)
 	case int8:
@@ -76,30 +79,30 @@ func New(intf interface{}) Key {
 	case bool:
 		return boolKey(t)
 	case value.Value:
-		return keyImpl{key: intf}
+		return interfaceKey{key: intf}
 	default:
 		panic(fmt.Sprintf("Invalid type for key: %T", intf))
 	}
 }
 
-func (k keyImpl) Key() interface{} {
+func (k interfaceKey) Key() interface{} {
 	return k.key
 }
 
-func (k keyImpl) String() string {
+func (k interfaceKey) String() string {
 	return stringify(k.key)
 }
 
-func (k keyImpl) GoString() string {
+func (k interfaceKey) GoString() string {
 	return fmt.Sprintf("key.New(%#v)", k.Key())
 }
 
-func (k keyImpl) MarshalJSON() ([]byte, error) {
+func (k interfaceKey) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.Key())
 }
 
-func (k keyImpl) Equal(other interface{}) bool {
-	o, ok := other.(keyImpl)
+func (k interfaceKey) Equal(other interface{}) bool {
+	o, ok := other.(interfaceKey)
 	return ok && keyEqual(k.key, o.key)
 }
 
@@ -115,6 +118,18 @@ func mapStringEqual(a, b map[string]interface{}) bool {
 	}
 	for k, av := range a {
 		if bv, ok := b[k]; !ok || !keyEqual(av, bv) {
+			return false
+		}
+	}
+	return true
+}
+
+func sliceEqual(a, b []interface{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if !keyEqual(v, b[i]) {
 			return false
 		}
 	}
@@ -137,6 +152,9 @@ func keyEqual(a, b interface{}) bool {
 			}
 		}
 		return true
+	case []interface{}:
+		b, ok := b.([]interface{})
+		return ok && sliceEqual(a, b)
 	case Comparable:
 		return a.Equal(b)
 	}
@@ -149,7 +167,7 @@ func (k strKey) Key() interface{} {
 }
 
 func (k strKey) String() string {
-	return escape(string(k))
+	return string(k)
 }
 
 func (k strKey) GoString() string {
@@ -157,7 +175,7 @@ func (k strKey) GoString() string {
 }
 
 func (k strKey) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(k))
+	return json.Marshal(escape(string(k)))
 }
 
 func (k strKey) Equal(other interface{}) bool {

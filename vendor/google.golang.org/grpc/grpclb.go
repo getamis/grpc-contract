@@ -30,12 +30,12 @@ import (
 	lbpb "google.golang.org/grpc/grpclb/grpc_lb_v1/messages"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
-	"google.golang.org/grpc/resolver/manual"
 )
 
 const (
 	lbTokeyKey             = "lb-token"
 	defaultFallbackTimeout = 10 * time.Second
+	grpclbName             = "grpclb"
 )
 
 func convertDuration(d *lbpb.Duration) time.Duration {
@@ -58,7 +58,7 @@ func (c *loadBalancerClient) BalanceLoad(ctx context.Context, opts ...CallOption
 		ServerStreams: true,
 		ClientStreams: true,
 	}
-	stream, err := NewClientStream(ctx, desc, c.cc, "/grpc.lb.v1.LoadBalancer/BalanceLoad", opts...)
+	stream, err := c.cc.NewStream(ctx, desc, "/grpc.lb.v1.LoadBalancer/BalanceLoad", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,9 +82,12 @@ func (x *balanceLoadClientStream) Recv() (*lbpb.LoadBalanceResponse, error) {
 	return m, nil
 }
 
-// NewLBBuilder creates a builder for grpclb. For testing only.
-func NewLBBuilder() balancer.Builder {
-	// TODO(bar grpclb) this function is exported for testing only, remove it when resolver supports selecting grpclb.
+func init() {
+	balancer.Register(newLBBuilder())
+}
+
+// newLBBuilder creates a builder for grpclb.
+func newLBBuilder() balancer.Builder {
 	return NewLBBuilderWithFallbackTimeout(defaultFallbackTimeout)
 }
 
@@ -105,7 +108,7 @@ type lbBuilder struct {
 }
 
 func (b *lbBuilder) Name() string {
-	return "grpclb"
+	return grpclbName
 }
 
 func (b *lbBuilder) Build(cc balancer.ClientConn, opt balancer.BuildOptions) balancer.Balancer {
@@ -113,7 +116,7 @@ func (b *lbBuilder) Build(cc balancer.ClientConn, opt balancer.BuildOptions) bal
 	// scheme will be used to dial to remote LB, so we can send filtered address
 	// updates to remote LB ClientConn using this manual resolver.
 	scheme := "grpclb_internal_" + strconv.FormatInt(time.Now().UnixNano(), 36)
-	r := manual.NewBuilderWithScheme(scheme)
+	r := &lbManualResolver{scheme: scheme, ccb: cc}
 
 	var target string
 	targetSplitted := strings.Split(cc.Target(), ":///")
@@ -124,7 +127,7 @@ func (b *lbBuilder) Build(cc balancer.ClientConn, opt balancer.BuildOptions) bal
 	}
 
 	lb := &lbBalancer{
-		cc:              cc,
+		cc:              newLBCacheClientConn(cc),
 		target:          target,
 		opt:             opt,
 		fallbackTimeout: b.fallbackTimeout,
@@ -142,7 +145,7 @@ func (b *lbBuilder) Build(cc balancer.ClientConn, opt balancer.BuildOptions) bal
 }
 
 type lbBalancer struct {
-	cc              balancer.ClientConn
+	cc              *lbCacheClientConn
 	target          string
 	opt             balancer.BuildOptions
 	fallbackTimeout time.Duration
@@ -151,7 +154,7 @@ type lbBalancer struct {
 	// manualResolver is used in the remote LB ClientConn inside grpclb. When
 	// resolved address updates are received by grpclb, filtered updates will be
 	// send to remote LB ClientConn through this resolver.
-	manualResolver *manual.Resolver
+	manualResolver *lbManualResolver
 	// The ClientConn to talk to the remote balancer.
 	ccRemoteLB *ClientConn
 
@@ -217,7 +220,6 @@ func (lb *lbBalancer) regeneratePicker() {
 		subConns:   readySCs,
 		stats:      lb.clientStats,
 	}
-	return
 }
 
 func (lb *lbBalancer) HandleSubConnStateChange(sc balancer.SubConn, s connectivity.State) {
@@ -254,7 +256,6 @@ func (lb *lbBalancer) HandleSubConnStateChange(sc balancer.SubConn, s connectivi
 	}
 
 	lb.cc.UpdateBalancerState(lb.state, lb.picker)
-	return
 }
 
 // fallbackToBackendsAfter blocks for fallbackTimeout and falls back to use
@@ -336,4 +337,5 @@ func (lb *lbBalancer) Close() {
 	if lb.ccRemoteLB != nil {
 		lb.ccRemoteLB.Close()
 	}
+	lb.cc.close()
 }

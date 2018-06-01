@@ -151,11 +151,23 @@ func (m Method) printBody() string {
 				},
 				"PrintOutputArgs": func() (result string) {
 					args := ""
+					respFiledCount := 0
+					for _, f := range m.Response.Fields {
+						if strings.HasPrefix(f.Name, unknownFieldPrefix) {
+							continue
+						}
+						respFiledCount++
+					}
 					// return multiple values
-					if len(m.Response.Fields) > 1 {
+					if respFiledCount > 1 {
 						inner := m.ContractMethod.Results[0].Inner
 						for i := 0; i < len(m.Response.Fields); i++ {
-							args += "\n\t\t" + toResponseParam(fmt.Sprintf("data.%v", inner[i].Name), inner[i], m.Response.Fields[i]) + ","
+							if strings.HasPrefix(m.Response.Fields[i].Name, unknownFieldPrefix) {
+								continue
+							}
+							if len(inner) > 0 {
+								args += "\n\t\t" + toResponseParam(fmt.Sprintf("data.%v", inner[i].Name), inner[i], m.Response.Fields[i]) + ","
+							}
 						}
 					} else {
 						args += "\n\t\t" + toResponseParam("data", m.ContractMethod.Results[0], m.Response.Fields[0]) + ","
@@ -171,6 +183,9 @@ func (m Method) printBody() string {
 				"PrintArgs": func() (result string) {
 					args := ""
 					for i := 1; i < len(m.Request.Fields); i++ {
+						if strings.HasPrefix(m.Request.Fields[i].Name, unknownFieldPrefix) {
+							continue
+						}
 						args += "\n\t\t" + toRequestParam(m.Request.Fields[i], m.ContractMethod.Params[i]) + ","
 					}
 					return args

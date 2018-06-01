@@ -13,12 +13,12 @@ setup:
 
 run:
 	solc --bin --abi --optimize --overwrite -o . $(name).sol
-	mkdir -p contracts
-	sol2proto --pkg contracts --abi $(name).abi
-	mv *.proto contracts
-	protoc --go_out=plugins=grpc:./contracts -I contracts contracts/*.proto
-	abigen --type $(name) --abi $(name).abi --pkg contracts --out ./contracts/$(filename).go --bin $(name).bin
-	grpc-contract --types $(filename) --path ./contracts --pb-path ./contracts
+	mkdir -p pb
+	sol2proto --pkg pb --abi $(name).abi
+	mv *.proto pb
+	protoc --go_out=plugins=grpc:./pb -I pb pb/*.proto -I ../vendor pb/*.proto
+	abigen --type $(name) --abi $(name).abi --pkg pb --out ./pb/$(filename).go --bin $(name).bin
+	grpc-contract --types $(filename) --path ./pb --pb-path ./pb
 
 server:
 	go build -v -o ./build/bin/server ./cmd/server

@@ -16,8 +16,8 @@
  *
  */
 
-//go:generate protoc --go_out=plugins=:$GOPATH grpc_lb_v1/messages/messages.proto
-//go:generate protoc --go_out=plugins=grpc:$GOPATH grpc_lb_v1/service/service.proto
+//go:generate protoc --go_out=plugins=:$GOPATH/src grpc_lb_v1/messages/messages.proto
+//go:generate protoc --go_out=plugins=grpc:$GOPATH/src grpc_lb_v1/service/service.proto
 
 // Package grpclb_test is currently used only for grpclb testing.
 package grpclb_test
@@ -34,9 +34,9 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	lbmpb "google.golang.org/grpc/grpclb/grpc_lb_v1/messages"
@@ -49,8 +49,6 @@ import (
 	"google.golang.org/grpc/status"
 	testpb "google.golang.org/grpc/test/grpc_testing"
 	"google.golang.org/grpc/test/leakcheck"
-
-	_ "google.golang.org/grpc/grpclog/glogger"
 )
 
 var (
@@ -344,7 +342,6 @@ func TestGRPCLB(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, r.Scheme()+":///"+beServerName,
-		grpc.WithBalancerBuilder(grpc.NewLBBuilder()),
 		grpc.WithTransportCredentials(&creds), grpc.WithDialer(fakeNameDialer))
 	if err != nil {
 		t.Fatalf("Failed to dial to the backend %v", err)
@@ -396,7 +393,6 @@ func TestGRPCLBWeighted(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, r.Scheme()+":///"+beServerName,
-		grpc.WithBalancerBuilder(grpc.NewLBBuilder()),
 		grpc.WithTransportCredentials(&creds), grpc.WithDialer(fakeNameDialer))
 	if err != nil {
 		t.Fatalf("Failed to dial to the backend %v", err)
@@ -462,7 +458,6 @@ func TestDropRequest(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, r.Scheme()+":///"+beServerName,
-		grpc.WithBalancerBuilder(grpc.NewLBBuilder()),
 		grpc.WithTransportCredentials(&creds), grpc.WithDialer(fakeNameDialer))
 	if err != nil {
 		t.Fatalf("Failed to dial to the backend %v", err)
@@ -476,16 +471,24 @@ func TestDropRequest(t *testing.T) {
 		ServerName: lbServerName,
 	}})
 
-	// The 1st, non-fail-fast RPC should succeed.  This ensures both server
-	// connections are made, because the first one has DropForLoadBalancing set to true.
-	if _, err := testC.EmptyCall(context.Background(), &testpb.Empty{}, grpc.FailFast(false)); err != nil {
+	// Wait for the 1st, non-fail-fast RPC to succeed. This ensures both server
+	// connections are made, because the first one has DropForLoadBalancing set
+	// to true.
+	var i int
+	for i = 0; i < 1000; i++ {
+		if _, err := testC.EmptyCall(context.Background(), &testpb.Empty{}, grpc.FailFast(false)); err == nil {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if i >= 1000 {
 		t.Fatalf("%v.SayHello(_, _) = _, %v, want _, <nil>", testC, err)
 	}
 	for _, failfast := range []bool{true, false} {
 		for i := 0; i < 3; i++ {
 			// Even RPCs should fail, because the 2st backend has
 			// DropForLoadBalancing set to true.
-			if _, err := testC.EmptyCall(context.Background(), &testpb.Empty{}, grpc.FailFast(failfast)); grpc.Code(err) != codes.Unavailable {
+			if _, err := testC.EmptyCall(context.Background(), &testpb.Empty{}, grpc.FailFast(failfast)); status.Code(err) != codes.Unavailable {
 				t.Errorf("%v.EmptyCall(_, _) = _, %v, want _, %s", testC, err, codes.Unavailable)
 			}
 			// Odd RPCs should succeed since they choose the non-drop-request
@@ -537,7 +540,6 @@ func TestBalancerDisconnects(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, r.Scheme()+":///"+beServerName,
-		grpc.WithBalancerBuilder(grpc.NewLBBuilder()),
 		grpc.WithTransportCredentials(&creds), grpc.WithDialer(fakeNameDialer))
 	if err != nil {
 		t.Fatalf("Failed to dial to the backend %v", err)
@@ -578,6 +580,24 @@ func TestBalancerDisconnects(t *testing.T) {
 	t.Fatalf("No RPC sent to second backend after 1 second")
 }
 
+type customGRPCLBBuilder struct {
+	balancer.Builder
+	name string
+}
+
+func (b *customGRPCLBBuilder) Name() string {
+	return b.name
+}
+
+const grpclbCustomFallbackName = "grpclb_with_custom_fallback_timeout"
+
+func init() {
+	balancer.Register(&customGRPCLBBuilder{
+		Builder: grpc.NewLBBuilderWithFallbackTimeout(100 * time.Millisecond),
+		name:    grpclbCustomFallbackName,
+	})
+}
+
 func TestFallback(t *testing.T) {
 	defer leakcheck.Check(t)
 
@@ -616,7 +636,7 @@ func TestFallback(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, r.Scheme()+":///"+beServerName,
-		grpc.WithBalancerBuilder(grpc.NewLBBuilderWithFallbackTimeout(100*time.Millisecond)),
+		grpc.WithBalancerName(grpclbCustomFallbackName),
 		grpc.WithTransportCredentials(&creds), grpc.WithDialer(fakeNameDialer))
 	if err != nil {
 		t.Fatalf("Failed to dial to the backend %v", err)
@@ -710,7 +730,6 @@ func runAndGetStats(t *testing.T, dropForLoadBalancing, dropForRateLimiting bool
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, r.Scheme()+":///"+beServerName,
-		grpc.WithBalancerBuilder(grpc.NewLBBuilder()),
 		grpc.WithTransportCredentials(&creds),
 		grpc.WithPerRPCCredentials(failPreRPCCred{}),
 		grpc.WithDialer(fakeNameDialer))
@@ -826,7 +845,7 @@ func TestGRPCLBStatsUnaryFailedToSend(t *testing.T) {
 			t.Fatalf("%v.EmptyCall(_, _) = _, %v, want _, <nil>", testC, err)
 		}
 		for i := 0; i < countRPC-1; i++ {
-			grpc.Invoke(context.Background(), failtosendURI, &testpb.Empty{}, nil, cc)
+			cc.Invoke(context.Background(), failtosendURI, &testpb.Empty{}, nil)
 		}
 	})
 
@@ -947,7 +966,7 @@ func TestGRPCLBStatsStreamingFailedToSend(t *testing.T) {
 			}
 		}
 		for i := 0; i < countRPC-1; i++ {
-			grpc.NewClientStream(context.Background(), &grpc.StreamDesc{}, cc, failtosendURI)
+			cc.NewStream(context.Background(), &grpc.StreamDesc{}, failtosendURI)
 		}
 	})
 
